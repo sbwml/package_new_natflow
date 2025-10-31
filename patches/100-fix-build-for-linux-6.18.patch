@@ -1,0 +1,59 @@
+--- a/natflow_conntrack.c
++++ b/natflow_conntrack.c
+@@ -126,6 +126,7 @@ static const char *const sctp_conntrack_
+ 	"HEARTBEAT_ACKED",
+ };
+ 
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0))
+ static const char * const dccp_state_names[] = {
+ 	[CT_DCCP_NONE]          = "NONE",
+ 	[CT_DCCP_REQUEST]       = "REQUEST",
+@@ -138,6 +139,7 @@ static const char * const dccp_state_nam
+ 	[CT_DCCP_IGNORE]        = "IGNORE",
+ 	[CT_DCCP_INVALID]       = "INVALID",
+ };
++#endif
+ 
+ static const char *const tcp_conntrack_names[] = {
+ 	"NONE",
+@@ -173,8 +175,10 @@ static const char* l4proto_name(u16 prot
+ 		return "tcp";
+ 	case IPPROTO_UDP:
+ 		return "udp";
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0))
+ 	case IPPROTO_DCCP:
+ 		return "dccp";
++#endif
+ 	case IPPROTO_GRE:
+ 		return "gre";
+ 	case IPPROTO_SCTP:
+@@ -331,6 +335,7 @@ static ssize_t conntrackinfo_read(struct
+ 					                     ntohs(tuple->src.u.udp.port),
+ 					                     ntohs(tuple->dst.u.udp.port));
+ 					break;
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0))
+ 				case IPPROTO_DCCP:
+ 					ct_i->len += sprintf(ct_i->data + ct_i->len, "%s ", dccp_state_names[ct->proto.tcp.state]);
+ 					switch (tuple->src.l3num) {
+@@ -349,6 +354,7 @@ static ssize_t conntrackinfo_read(struct
+ 					                     ntohs(tuple->src.u.dccp.port),
+ 					                     ntohs(tuple->dst.u.dccp.port));
+ 					break;
++#endif
+ 				case IPPROTO_SCTP:
+ 					ct_i->len += sprintf(ct_i->data + ct_i->len, "%s ", sctp_conntrack_names[ct->proto.tcp.state]);
+ 					switch (tuple->src.l3num) {
+@@ -449,11 +455,13 @@ static ssize_t conntrackinfo_read(struct
+ 					                     ntohs(tuple->src.u.udp.port),
+ 					                     ntohs(tuple->dst.u.udp.port));
+ 					break;
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0))
+ 				case IPPROTO_DCCP:
+ 					ct_i->len += sprintf(ct_i->data + ct_i->len, "sport=%hu dport=%hu ",
+ 					                     ntohs(tuple->src.u.dccp.port),
+ 					                     ntohs(tuple->dst.u.dccp.port));
+ 					break;
++#endif
+ 				case IPPROTO_SCTP:
+ 					ct_i->len += sprintf(ct_i->data + ct_i->len, "sport=%hu dport=%hu ",
+ 					                     ntohs(tuple->src.u.sctp.port),
