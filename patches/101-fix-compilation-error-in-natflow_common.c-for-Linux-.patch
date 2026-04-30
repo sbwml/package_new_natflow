@@ -1,0 +1,129 @@
+From 2c9daf8966cf2608e352b035156c8c95399ca034 Mon Sep 17 00:00:00 2001
+From: sbwml <admin@cooluc.com>
+Date: Thu, 30 Apr 2026 19:01:00 +0800
+Subject: [PATCH] fix compilation error in natflow_common.c for Linux 6.18.22+
+
+Signed-off-by: sbwml <admin@cooluc.com>
+---
+ natflow_common.c | 61 +++++++++++++++++++++---------------------------
+ 1 file changed, 26 insertions(+), 35 deletions(-)
+
+--- a/natflow_common.c
++++ b/natflow_common.c
+@@ -20,6 +20,25 @@
+ #include <linux/netfilter/x_tables.h>
+ #include <linux/netfilter/xt_set.h>
+ #include "natflow_common.h"
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 22)
++static inline ip_set_id_t compat_ip_set_get_byname(struct net *net, const char *name, struct ip_set **set)
++{
++	return ip_set_get_byname(net, (const struct nlattr *)name, set);
++}
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
++/* Mainline 6.11+ */
++static inline ip_set_id_t compat_ip_set_get_byname(struct net *net, const char *name, struct ip_set **set)
++{
++	ip_set_id_t id = ip_set_id_find_byname(net, name);
++	if (id != IPSET_INVALID_ID)
++		ip_set_get_byindex(net, id);
++	return id;
++}
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
++#define compat_ip_set_get_byname(net, name, set) ip_set_get_byname(net, name, set)
++#else
++#define compat_ip_set_get_byname(net, name, set) ip_set_get_byname(name, set)
++#endif
+ 
+ unsigned int debug = 0;
+ module_param(debug, int, 0);
+@@ -218,11 +237,7 @@ int ip_set_test_src_ip(const struct net_
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		return -EINVAL;
+ 	}
+@@ -277,11 +292,7 @@ int ip_set_test_dst_ip(const struct net_
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		NATFLOW_DEBUG("ip_set '%s' not found\n", ip_set_name);
+ 		return 0;
+@@ -337,11 +348,7 @@ int ip_set_add_src_ip(const struct net_d
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		NATFLOW_DEBUG("ip_set '%s' not found\n", ip_set_name);
+ 		return 0;
+@@ -397,11 +404,7 @@ int ip_set_add_dst_ip(const struct net_d
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		NATFLOW_DEBUG("ip_set '%s' not found\n", ip_set_name);
+ 		return 0;
+@@ -457,11 +460,7 @@ int ip_set_del_src_ip(const struct net_d
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		NATFLOW_DEBUG("ip_set '%s' not found\n", ip_set_name);
+ 		return 0;
+@@ -517,11 +516,7 @@ int ip_set_del_dst_ip(const struct net_d
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		NATFLOW_DEBUG("ip_set '%s' not found\n", ip_set_name);
+ 		return 0;
+@@ -577,11 +572,7 @@ int ip_set_test_src_mac(const struct net
+ #endif
+ #endif
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
+-	id = ip_set_get_byname(net, ip_set_name, &set);
+-#else
+-	id = ip_set_get_byname(ip_set_name, &set);
+-#endif
++	id = compat_ip_set_get_byname(net, ip_set_name, &set);
+ 	if (id == IPSET_INVALID_ID) {
+ 		return -EINVAL;
+ 	}
